@@ -1,0 +1,10 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ConverterApp from '../components/ConverterApp';
+import ParticleField from '../components/ParticleField';
+---
+
+<Layout>
+  <ParticleField client:only="react" />
+  <ConverterApp client:load />
+</Layout>

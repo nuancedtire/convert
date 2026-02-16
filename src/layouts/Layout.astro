@@ -1,0 +1,34 @@
+---
+import '../styles/global.css';
+import { ViewTransitions } from 'astro:transitions';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { 
+  title = 'Convert — Universal File Converter',
+  description = 'Transform any file format in your browser. No uploads, complete privacy. Powered by WebAssembly.'
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <title>{title}</title>
+    <ViewTransitions />
+  </head>
+  <body class="min-h-screen overflow-x-hidden">
+    <div class="fixed inset-0 grid-pattern opacity-30 pointer-events-none" />
+    <div class="fixed inset-0 bg-gradient-to-br from-primary-950/50 via-transparent to-accent-950/30 pointer-events-none" />
+    <slot />
+  </body>
+</html>
