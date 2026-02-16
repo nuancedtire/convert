@@ -9,7 +9,7 @@ const isProd = process.env.NODE_ENV === 'production';
 export default defineConfig({
   integrations: [react()],
   // Update these for your GitHub username and repo name
-  site: isProd ? 'https://yourusername.github.io' : 'http://localhost:8000',
+  site: isProd ? 'https://nuancedtire.github.io' : 'http://localhost:8000',
   base: isProd ? '/convert' : '/',
   vite: {
     plugins: [tailwindcss()],
