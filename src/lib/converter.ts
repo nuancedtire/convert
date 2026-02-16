@@ -5,9 +5,11 @@ import RenameHandler from './handlers/rename';
 import ImageMagickHandler from './handlers/imageMagick';
 import PdfToImgHandler from './handlers/pdfToImg';
 import SvgHandler from './handlers/svgHandler';
+import FFmpegHandler from './handlers/ffmpeg';
 
 // All available handlers - order matters for priority
 const handlerClasses = [
+  FFmpegHandler,       // Video and audio conversions
   ImageMagickHandler,  // Most comprehensive - handles many formats including PDF output
   PdfToImgHandler,     // PDF to image (specialized, higher quality than ImageMagick for this)
   SvgHandler,          // SVG and HTML conversions
