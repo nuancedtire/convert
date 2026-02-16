@@ -2,11 +2,17 @@ import type { FileData, FileFormat, FormatHandler, ConversionProgress, Conversio
 import { normalizeMimeType, getCategoryFromMime } from './utils';
 import CanvasToBlobHandler from './handlers/canvasToBlob';
 import RenameHandler from './handlers/rename';
+import ImageMagickHandler from './handlers/imageMagick';
+import PdfToImgHandler from './handlers/pdfToImg';
+import SvgHandler from './handlers/svgHandler';
 
-// All available handlers
+// All available handlers - order matters for priority
 const handlerClasses = [
-  CanvasToBlobHandler,
-  RenameHandler,
+  ImageMagickHandler,  // Most comprehensive - handles many formats including PDF output
+  PdfToImgHandler,     // PDF to image (specialized, higher quality than ImageMagick for this)
+  SvgHandler,          // SVG and HTML conversions
+  CanvasToBlobHandler, // Fast browser-native image conversions
+  RenameHandler,       // Archive/office format renames
 ];
 
 let handlers: FormatHandler[] = [];
