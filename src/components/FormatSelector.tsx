@@ -2,14 +2,9 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronDown, Image, Video, Music, FileText, Archive, File, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
+import type { FileFormat } from '../lib/types';
 
-export interface Format {
-  name: string;
-  format: string;
-  extension: string;
-  mime: string;
-  category: 'image' | 'video' | 'audio' | 'document' | 'archive' | 'other';
-}
+export type Format = FileFormat;
 
 interface FormatSelectorProps {
   label: string;

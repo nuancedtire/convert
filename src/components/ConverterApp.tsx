@@ -1,60 +1,13 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowDownUp, Shield, Cpu, Github, Sparkles, Zap, Lock } from 'lucide-react';
+import { ArrowDownUp, Shield, Cpu, Github, Sparkles, Zap, Lock, Loader2 } from 'lucide-react';
 import DropZone from './DropZone';
-import FormatSelector, { type Format } from './FormatSelector';
+import FormatSelector from './FormatSelector';
 import ConvertButton from './ConvertButton';
-import ProgressModal, { type ConversionResult } from './ProgressModal';
-
-// Mock format data - in real app, this would come from the conversion handlers
-const FORMATS: Format[] = [
-  // Images
-  { name: 'PNG Image', format: 'png', extension: 'png', mime: 'image/png', category: 'image' },
-  { name: 'JPEG Image', format: 'jpeg', extension: 'jpg', mime: 'image/jpeg', category: 'image' },
-  { name: 'WebP Image', format: 'webp', extension: 'webp', mime: 'image/webp', category: 'image' },
-  { name: 'GIF Animation', format: 'gif', extension: 'gif', mime: 'image/gif', category: 'image' },
-  { name: 'BMP Bitmap', format: 'bmp', extension: 'bmp', mime: 'image/bmp', category: 'image' },
-  { name: 'TIFF Image', format: 'tiff', extension: 'tiff', mime: 'image/tiff', category: 'image' },
-  { name: 'SVG Vector', format: 'svg', extension: 'svg', mime: 'image/svg+xml', category: 'image' },
-  { name: 'ICO Icon', format: 'ico', extension: 'ico', mime: 'image/x-icon', category: 'image' },
-  { name: 'AVIF Image', format: 'avif', extension: 'avif', mime: 'image/avif', category: 'image' },
-  { name: 'HEIC Image', format: 'heic', extension: 'heic', mime: 'image/heic', category: 'image' },
-  
-  // Video
-  { name: 'MP4 Video', format: 'mp4', extension: 'mp4', mime: 'video/mp4', category: 'video' },
-  { name: 'WebM Video', format: 'webm', extension: 'webm', mime: 'video/webm', category: 'video' },
-  { name: 'AVI Video', format: 'avi', extension: 'avi', mime: 'video/x-msvideo', category: 'video' },
-  { name: 'MOV Video', format: 'mov', extension: 'mov', mime: 'video/quicktime', category: 'video' },
-  { name: 'MKV Video', format: 'mkv', extension: 'mkv', mime: 'video/x-matroska', category: 'video' },
-  { name: 'FLV Video', format: 'flv', extension: 'flv', mime: 'video/x-flv', category: 'video' },
-  { name: 'WMV Video', format: 'wmv', extension: 'wmv', mime: 'video/x-ms-wmv', category: 'video' },
-  { name: 'OGV Video', format: 'ogv', extension: 'ogv', mime: 'video/ogg', category: 'video' },
-  
-  // Audio
-  { name: 'MP3 Audio', format: 'mp3', extension: 'mp3', mime: 'audio/mpeg', category: 'audio' },
-  { name: 'WAV Audio', format: 'wav', extension: 'wav', mime: 'audio/wav', category: 'audio' },
-  { name: 'OGG Audio', format: 'ogg', extension: 'ogg', mime: 'audio/ogg', category: 'audio' },
-  { name: 'FLAC Audio', format: 'flac', extension: 'flac', mime: 'audio/flac', category: 'audio' },
-  { name: 'AAC Audio', format: 'aac', extension: 'aac', mime: 'audio/aac', category: 'audio' },
-  { name: 'M4A Audio', format: 'm4a', extension: 'm4a', mime: 'audio/mp4', category: 'audio' },
-  { name: 'WMA Audio', format: 'wma', extension: 'wma', mime: 'audio/x-ms-wma', category: 'audio' },
-  
-  // Documents
-  { name: 'PDF Document', format: 'pdf', extension: 'pdf', mime: 'application/pdf', category: 'document' },
-  { name: 'Plain Text', format: 'txt', extension: 'txt', mime: 'text/plain', category: 'document' },
-  { name: 'HTML Document', format: 'html', extension: 'html', mime: 'text/html', category: 'document' },
-  { name: 'Markdown', format: 'md', extension: 'md', mime: 'text/markdown', category: 'document' },
-  { name: 'JSON Data', format: 'json', extension: 'json', mime: 'application/json', category: 'document' },
-  { name: 'XML Data', format: 'xml', extension: 'xml', mime: 'application/xml', category: 'document' },
-  { name: 'CSV Data', format: 'csv', extension: 'csv', mime: 'text/csv', category: 'document' },
-  
-  // Archives
-  { name: 'ZIP Archive', format: 'zip', extension: 'zip', mime: 'application/zip', category: 'archive' },
-  { name: 'TAR Archive', format: 'tar', extension: 'tar', mime: 'application/x-tar', category: 'archive' },
-  { name: 'GZIP Archive', format: 'gz', extension: 'gz', mime: 'application/gzip', category: 'archive' },
-  { name: '7Z Archive', format: '7z', extension: '7z', mime: 'application/x-7z-compressed', category: 'archive' },
-  { name: 'RAR Archive', format: 'rar', extension: 'rar', mime: 'application/vnd.rar', category: 'archive' },
-];
+import ProgressModal from './ProgressModal';
+import type { FileFormat, ConversionProgress } from '../lib/types';
+import { initializeConverter, convert, findFormatByMime } from '../lib/converter';
+import { downloadFile } from '../lib/utils';
 
 const features = [
   { icon: Shield, title: 'Private & Secure', description: 'All processing happens in your browser. Your files never leave your device.' },
@@ -64,26 +17,60 @@ const features = [
 
 export default function ConverterApp() {
   const [files, setFiles] = useState<File[]>([]);
-  const [inputFormat, setInputFormat] = useState<Format | null>(null);
-  const [outputFormat, setOutputFormat] = useState<Format | null>(null);
+  const [inputFormat, setInputFormat] = useState<FileFormat | null>(null);
+  const [outputFormat, setOutputFormat] = useState<FileFormat | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [conversionStatus, setConversionStatus] = useState<'converting' | 'success' | 'error'>('converting');
   const [conversionMessage, setConversionMessage] = useState('');
-  const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
+  const [conversionPath, setConversionPath] = useState<string[]>([]);
+  const [convertedFiles, setConvertedFiles] = useState<Array<{ name: string; bytes: Uint8Array }>>([]);
+  
+  // Format loading state
+  const [formats, setFormats] = useState<FileFormat[]>([]);
+  const [isLoadingFormats, setIsLoadingFormats] = useState(true);
+
+  // Initialize converter on mount
+  useEffect(() => {
+    let mounted = true;
+    
+    const init = async () => {
+      try {
+        const loadedFormats = await initializeConverter((progress) => {
+          if (!mounted) return;
+          console.log(`[Init] ${progress.message} (${progress.progress}%)`);
+        });
+        if (mounted) {
+          setFormats(loadedFormats);
+          setIsLoadingFormats(false);
+        }
+      } catch (e) {
+        console.error('Failed to initialize converter:', e);
+        if (mounted) {
+          setIsLoadingFormats(false);
+        }
+      }
+    };
+
+    init();
+    return () => { mounted = false; };
+  }, []);
 
   const detectedMime = useMemo(() => {
     if (files.length === 0) return undefined;
     return files[0].type || undefined;
   }, [files]);
 
+  const inputFormats = useMemo(() => formats.filter(f => f.from), [formats]);
+  const outputFormats = useMemo(() => formats.filter(f => f.to), [formats]);
+
   const handleFilesSelected = useCallback((newFiles: File[]) => {
     setFiles(newFiles);
     // Try to auto-detect input format
     const mime = newFiles[0]?.type;
     if (mime) {
-      const matchingFormat = FORMATS.find(f => f.mime === mime);
-      if (matchingFormat) {
+      const matchingFormat = findFormatByMime(mime);
+      if (matchingFormat && matchingFormat.from) {
         setInputFormat(matchingFormat);
       }
     }
@@ -93,50 +80,52 @@ export default function ConverterApp() {
     setFiles([]);
     setInputFormat(null);
     setOutputFormat(null);
+    setConvertedFiles([]);
   }, []);
 
   const canConvert = files.length > 0 && inputFormat && outputFormat;
 
   const handleConvert = useCallback(async () => {
-    if (!canConvert) return;
+    if (!canConvert || !inputFormat || !outputFormat) return;
 
     setIsConverting(true);
     setModalOpen(true);
     setConversionStatus('converting');
     setConversionMessage('Finding the best conversion route...');
+    setConversionPath([]);
+    setConvertedFiles([]);
 
-    // Simulate conversion (in real app, this would call the actual conversion handlers)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const handleProgress = (progress: ConversionProgress) => {
+      setConversionMessage(progress.message);
+    };
 
-    // Mock success result
-    const success = Math.random() > 0.2; // 80% success rate for demo
-    
-    if (success) {
-      setConversionStatus('success');
-      setConversionMessage(`Successfully converted ${files[0].name} to ${outputFormat!.format.toUpperCase()}`);
-      setConversionResult({
-        success: true,
-        message: 'Conversion complete!',
-        path: [inputFormat!.format.toUpperCase(), outputFormat!.format.toUpperCase()],
-        fileName: files[0].name.replace(/\.[^/.]+$/, `.${outputFormat!.extension}`),
-      });
-    } else {
+    try {
+      const result = await convert(files, inputFormat, outputFormat, handleProgress);
+
+      if (result.success && result.files) {
+        setConversionStatus('success');
+        setConversionMessage(`Successfully converted ${files[0].name} to ${outputFormat.format.toUpperCase()}`);
+        setConversionPath(result.path || []);
+        setConvertedFiles(result.files);
+      } else {
+        setConversionStatus('error');
+        setConversionMessage(result.message);
+        setConversionPath(result.path || []);
+      }
+    } catch (e) {
       setConversionStatus('error');
-      setConversionMessage('Could not find a valid conversion route. Try a different output format.');
-      setConversionResult({
-        success: false,
-        message: 'Conversion failed',
-      });
+      setConversionMessage(e instanceof Error ? e.message : 'An unexpected error occurred');
     }
 
     setIsConverting(false);
   }, [canConvert, files, inputFormat, outputFormat]);
 
   const handleDownload = useCallback(() => {
-    // In real app, this would trigger the actual download
-    alert('Download would start here in the real app!');
+    for (const file of convertedFiles) {
+      downloadFile(file.bytes, file.name, outputFormat?.mime || 'application/octet-stream');
+    }
     setModalOpen(false);
-  }, []);
+  }, [convertedFiles, outputFormat]);
 
   return (
     <div className="relative min-h-screen">
@@ -210,36 +199,50 @@ export default function ConverterApp() {
             onClear={handleClearFiles}
           />
 
-          {/* Format Selectors */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: files.length > 0 ? 1 : 0.5 }}
-            className="mt-12 grid md:grid-cols-2 gap-8"
-          >
-            <FormatSelector
-              label="Convert from"
-              formats={FORMATS}
-              selectedFormat={inputFormat}
-              onSelect={setInputFormat}
-              suggestedMime={detectedMime}
-            />
-            
-            <FormatSelector
-              label="Convert to"
-              formats={FORMATS}
-              selectedFormat={outputFormat}
-              onSelect={setOutputFormat}
-            />
-          </motion.div>
+          {/* Loading State */}
+          {isLoadingFormats ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-12 flex flex-col items-center justify-center py-12"
+            >
+              <Loader2 className="w-8 h-8 text-primary-400 animate-spin mb-4" />
+              <p className="text-surface-400">Loading conversion tools...</p>
+            </motion.div>
+          ) : (
+            <>
+              {/* Format Selectors */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: files.length > 0 ? 1 : 0.5 }}
+                className="mt-12 grid md:grid-cols-2 gap-8"
+              >
+                <FormatSelector
+                  label="Convert from"
+                  formats={inputFormats}
+                  selectedFormat={inputFormat}
+                  onSelect={setInputFormat}
+                  suggestedMime={detectedMime}
+                />
+                
+                <FormatSelector
+                  label="Convert to"
+                  formats={outputFormats}
+                  selectedFormat={outputFormat}
+                  onSelect={setOutputFormat}
+                />
+              </motion.div>
 
-          {/* Convert Button */}
-          <div className="mt-12 flex justify-center">
-            <ConvertButton
-              disabled={!canConvert}
-              loading={isConverting}
-              onClick={handleConvert}
-            />
-          </div>
+              {/* Convert Button */}
+              <div className="mt-12 flex justify-center">
+                <ConvertButton
+                  disabled={!canConvert}
+                  loading={isConverting}
+                  onClick={handleConvert}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Features Section */}
@@ -287,10 +290,14 @@ export default function ConverterApp() {
         isOpen={modalOpen}
         status={conversionStatus}
         message={conversionMessage}
-        result={conversionResult ?? undefined}
+        result={{
+          success: conversionStatus === 'success',
+          message: conversionMessage,
+          path: conversionPath,
+        }}
         onClose={() => setModalOpen(false)}
         onRetry={handleConvert}
-        onDownload={handleDownload}
+        onDownload={convertedFiles.length > 0 ? handleDownload : undefined}
       />
     </div>
   );

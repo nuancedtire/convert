@@ -16,6 +16,9 @@ export default defineConfig({
     optimizeDeps: {
       exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
     },
+    server: {
+      allowedHosts: ['convert.exe.xyz', 'localhost'],
+    },
   },
   output: 'static',
 });
